@@ -1,0 +1,4 @@
+Flask
+nltk
+psycopg2-binary  # for PostgreSQL, or use mysql-connector-python for MySQL
+boto3  # for AWS integration 

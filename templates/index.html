@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sentiment Analysis Tool</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Sentiment Analyzer</h1>
+    <form id="sentimentForm">
+        <textarea name="text" placeholder="Enter your text..."></textarea><br>
+        <button type="submit">Analyze</button>
+    </form>
+    <p id="result"></p>
+
+    <script>
+        document.getElementById('sentimentForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            document.getElementById('result').innerText = 'Sentiment: ' + data.sentiment;
+        };
+    </script>
+</body>
+</html>
