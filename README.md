@@ -189,15 +189,22 @@ The app automatically switches from SQLite to PostgreSQL when all four `DB_*` va
 
 ```
 sentiment_tool/
-├── app.py                # Flask app, SQLAlchemy model, all routes
-├── sentiment_analyzer.py # VADER scoring + NLP keyword extraction
-├── nltk_setup.py         # NLTK resource download helper
-├── run.py                # Dev-server launcher
-├── requirements.txt
+├── app.py                  # Flask app, SQLAlchemy model, all routes
+├── sentiment_analyzer.py   # VADER scoring + NLP keyword extraction
+├── nltk_setup.py           # NLTK resource download helper
+├── run.py                  # Dev-server launcher
+├── Procfile                # Gunicorn entrypoint for deployment platforms
+├── requirements.txt        # Production dependencies
+├── requirements-dev.txt    # Dev/test dependencies (includes pytest)
+├── pytest.ini              # Pytest configuration
 ├── .env.example
 ├── .gitignore
+├── tests/
+│   ├── conftest.py         # Shared fixtures (in-memory SQLite test DB)
+│   ├── test_api.py         # Integration tests for all API endpoints
+│   └── test_analyzer.py    # Unit tests for sentiment_analyzer
 ├── templates/
-│   └── index.html        # Single-page UI
+│   └── index.html          # Single-page UI (Analyze / History / Stats)
 └── static/
     └── style.css
 ```
@@ -223,8 +230,11 @@ The compound score is mapped to labels using the thresholds recommended in the o
 | ≤ −0.05        | Negative |
 | Between        | Neutral  |
 
----
+## Running tests
 
-## Credentials notice
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
-`models/database.py` and `routes.py` are legacy files from an earlier prototype and contain only placeholder credential strings (`"your-rds-endpoint"`, etc.). They are not imported or used anywhere in the application and are marked for deletion. No real credentials were ever committed to this repository.
+Tests use an in-memory SQLite database and require no external services. The suite covers all API endpoints and the core sentiment analysis logic, including a specific regression test that verifies negation handling (VADER must run on the original text, not preprocessed text).
