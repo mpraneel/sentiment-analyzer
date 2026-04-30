@@ -1,28 +1,600 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sentiment Analysis Tool</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentiment Analyzer</title>
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-    <h1>Sentiment Analyzer</h1>
-    <form id="sentimentForm">
-        <textarea name="text" placeholder="Enter your text..."></textarea><br>
-        <button type="submit">Analyze</button>
-    </form>
-    <p id="result"></p>
 
-    <script>
-        document.getElementById('sentimentForm').onsubmit = async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const response = await fetch('/analyze', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            document.getElementById('result').innerText = 'Sentiment: ' + data.sentiment;
-        };
-    </script>
+  <!-- ===== Header ===== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
+          <path d="M9 16s1.5 3 5 3 5-3 5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="10.5" cy="11.5" r="1.5" fill="currentColor"/>
+          <circle cx="17.5" cy="11.5" r="1.5" fill="currentColor"/>
+        </svg>
+        <span>SentimentIQ</span>
+      </div>
+      <nav class="header-nav">
+        <button class="nav-btn active" data-tab="analyze">Analyze</button>
+        <button class="nav-btn" data-tab="history">History</button>
+        <button class="nav-btn" data-tab="stats">Stats</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="main-content">
+
+    <!-- ---- Analyze tab ---- -->
+    <section id="tab-analyze" class="tab-panel active">
+      <div class="analyze-grid">
+
+        <!-- Input card -->
+        <div class="card input-card">
+          <h2 class="card-title">Analyze Text</h2>
+          <p class="card-subtitle">Enter any text — a review, tweet, comment, or paragraph — and get instant sentiment feedback.</p>
+
+          <div class="textarea-wrapper">
+            <textarea
+              id="inputText"
+              placeholder="Type or paste your text here…"
+              maxlength="5000"
+              rows="6"
+              autofocus
+            ></textarea>
+            <span class="char-count" id="charCount">0 / 5000</span>
+          </div>
+
+          <div class="input-actions">
+            <button class="btn btn-primary" id="analyzeBtn">
+              <span class="btn-text">Analyze</span>
+              <span class="btn-spinner hidden" aria-hidden="true"></span>
+            </button>
+            <button class="btn btn-ghost" id="clearBtn">Clear</button>
+          </div>
+
+          <div id="errorBanner" class="error-banner hidden" role="alert"></div>
+        </div>
+
+        <!-- Result card -->
+        <div class="card result-card" id="resultCard">
+          <div class="result-empty" id="resultEmpty">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="empty-icon">
+              <circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
+              <path d="M16 28s2 4 8 4 8-4 8-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="18" cy="20" r="2" fill="currentColor"/>
+              <circle cx="30" cy="20" r="2" fill="currentColor"/>
+            </svg>
+            <p>Results will appear here</p>
+          </div>
+
+          <div class="result-content hidden" id="resultContent">
+            <!-- Sentiment badge + score -->
+            <div class="sentiment-header">
+              <div class="sentiment-badge" id="sentimentBadge">
+                <span class="sentiment-emoji" id="sentimentEmoji"></span>
+                <span class="sentiment-label" id="sentimentLabel"></span>
+              </div>
+              <div class="compound-score" id="compoundScore"></div>
+            </div>
+
+            <!-- Visual score meter -->
+            <div class="score-meter-wrap">
+              <div class="score-meter-track">
+                <div class="score-meter-fill" id="scoreMeterFill"></div>
+                <div class="score-meter-needle" id="scoreMeterNeedle"></div>
+              </div>
+              <div class="score-meter-labels">
+                <span>Very Negative</span>
+                <span>Neutral</span>
+                <span>Very Positive</span>
+              </div>
+            </div>
+
+            <!-- Breakdown bars -->
+            <div class="breakdown">
+              <h3 class="breakdown-title">Score breakdown</h3>
+              <div class="bar-row">
+                <span class="bar-label">Positive</span>
+                <div class="bar-track">
+                  <div class="bar-fill bar-pos" id="barPos"></div>
+                </div>
+                <span class="bar-value" id="valPos"></span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-label">Neutral</span>
+                <div class="bar-track">
+                  <div class="bar-fill bar-neu" id="barNeu"></div>
+                </div>
+                <span class="bar-value" id="valNeu"></span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-label">Negative</span>
+                <div class="bar-track">
+                  <div class="bar-fill bar-neg" id="barNeg"></div>
+                </div>
+                <span class="bar-value" id="valNeg"></span>
+              </div>
+            </div>
+
+            <!-- Keywords -->
+            <div class="keywords-section" id="keywordsSection">
+              <h3 class="breakdown-title">Key terms</h3>
+              <div class="keyword-chips" id="keywordChips"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="how-it-works">
+        <h3>How it works</h3>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <div>
+              <strong>VADER scoring</strong>
+              <p>The raw text is scored using VADER (Valence Aware Dictionary and sEntiment Reasoner), a lexicon and rule-based model tuned for social and expressive language.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <div>
+              <strong>NLP preprocessing</strong>
+              <p>Separately, the text is tokenised, stop-words removed, and words lemmatised to extract the most meaningful content keywords.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <div>
+              <strong>Persisted history</strong>
+              <p>Every analysis is stored in a database so you can track sentiment trends over time across multiple submissions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- History tab ---- -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <div class="card-toolbar">
+          <h2 class="card-title">Recent Analyses</h2>
+          <button class="btn btn-ghost btn-sm" id="refreshHistory">Refresh</button>
+        </div>
+
+        <div id="historyLoading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading history…</p>
+        </div>
+
+        <div id="historyEmpty" class="empty-state hidden">
+          <p>No analyses yet. Run your first one on the Analyze tab!</p>
+        </div>
+
+        <div id="historyTable" class="hidden">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>Sentiment</th>
+                <th>Score</th>
+                <th>Text preview</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- Stats tab ---- -->
+    <section id="tab-stats" class="tab-panel">
+      <div class="stats-grid">
+
+        <div class="card stat-card" id="statTotal">
+          <span class="stat-value" id="statTotalVal">--</span>
+          <span class="stat-label">Total Analyzed</span>
+        </div>
+        <div class="card stat-card stat-pos" id="statPos">
+          <span class="stat-value" id="statPosVal">--</span>
+          <span class="stat-label">Positive</span>
+        </div>
+        <div class="card stat-card stat-neu" id="statNeu">
+          <span class="stat-value" id="statNeuVal">--</span>
+          <span class="stat-label">Neutral</span>
+        </div>
+        <div class="card stat-card stat-neg" id="statNeg">
+          <span class="stat-value" id="statNegVal">--</span>
+          <span class="stat-label">Negative</span>
+        </div>
+
+        <div class="card stat-wide">
+          <h3 class="card-title">Sentiment distribution</h3>
+          <div class="donut-wrap" id="donutWrap">
+            <svg class="donut-chart" id="donutChart" viewBox="0 0 120 120">
+              <circle class="donut-bg" cx="60" cy="60" r="45" />
+              <circle class="donut-pos" id="donutPos" cx="60" cy="60" r="45"
+                      stroke-dasharray="0 283" stroke-dashoffset="0" />
+              <circle class="donut-neu" id="donutNeu" cx="60" cy="60" r="45"
+                      stroke-dasharray="0 283" stroke-dashoffset="0" />
+              <circle class="donut-neg" id="donutNeg" cx="60" cy="60" r="45"
+                      stroke-dasharray="0 283" stroke-dashoffset="0" />
+              <text x="60" y="55" class="donut-center-label" text-anchor="middle">Avg</text>
+              <text x="60" y="70" class="donut-center-value" id="donutAvg" text-anchor="middle">--</text>
+            </svg>
+            <div class="donut-legend">
+              <span class="legend-item legend-pos">Positive</span>
+              <span class="legend-item legend-neu">Neutral</span>
+              <span class="legend-item legend-neg">Negative</span>
+            </div>
+          </div>
+          <p class="stat-note" id="statNote"></p>
+        </div>
+
+        <div class="card stat-wide">
+          <h3 class="card-title">Average compound score</h3>
+          <div class="avg-score-display">
+            <div class="avg-score-meter">
+              <div class="avg-score-fill" id="avgScoreFill"></div>
+              <div class="avg-score-needle" id="avgScoreNeedle"></div>
+            </div>
+            <div class="avg-score-labels">
+              <span>-1.0</span>
+              <span>0.0</span>
+              <span>+1.0</span>
+            </div>
+          </div>
+          <p class="avg-score-value" id="avgScoreValue">--</p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Built with Flask &amp; NLTK VADER &bull; <a href="/health" target="_blank">Health check</a></p>
+  </footer>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // ------------------------------------------------------------------ //
+    // Tab navigation
+    // ------------------------------------------------------------------ //
+    const navBtns  = document.querySelectorAll('.nav-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        navBtns.forEach(b => b.classList.toggle('active', b === btn));
+        tabPanels.forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
+        if (tab === 'history') loadHistory();
+        if (tab === 'stats')   loadStats();
+      });
+    });
+
+    // ------------------------------------------------------------------ //
+    // Char counter
+    // ------------------------------------------------------------------ //
+    const textarea  = document.getElementById('inputText');
+    const charCount = document.getElementById('charCount');
+
+    textarea.addEventListener('input', () => {
+      const len = textarea.value.length;
+      charCount.textContent = `${len.toLocaleString()} / 5,000`;
+      charCount.classList.toggle('char-count-warn', len > 4500);
+    });
+
+    // ------------------------------------------------------------------ //
+    // Analyze
+    // ------------------------------------------------------------------ //
+    const analyzeBtn  = document.getElementById('analyzeBtn');
+    const clearBtn    = document.getElementById('clearBtn');
+    const errorBanner = document.getElementById('errorBanner');
+
+    analyzeBtn.addEventListener('click', runAnalysis);
+    textarea.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runAnalysis();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      textarea.value = '';
+      charCount.textContent = '0 / 5,000';
+      hideError();
+      hideResult();
+    });
+
+    async function runAnalysis() {
+      const text = textarea.value.trim();
+      if (!text) { showError('Please enter some text before analyzing.'); return; }
+
+      setLoading(true);
+      hideError();
+
+      try {
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || `Server error (${res.status})`);
+          return;
+        }
+
+        renderResult(data);
+        if (data.warning) showError(data.warning, 'warn');
+      } catch (err) {
+        showError('Could not reach the server. Please try again.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Result rendering
+    // ------------------------------------------------------------------ //
+    function renderResult(data) {
+      const { sentiment, compound_score: compound, detailed_scores: s, keywords } = data;
+
+      // Badge + label
+      const badge = document.getElementById('sentimentBadge');
+      badge.className = `sentiment-badge badge-${sentiment}`;
+      document.getElementById('sentimentEmoji').textContent =
+        sentiment === 'positive' ? '😊' : sentiment === 'negative' ? '😞' : '😐';
+      document.getElementById('sentimentLabel').textContent =
+        sentiment.charAt(0).toUpperCase() + sentiment.slice(1);
+
+      // Compound score display
+      document.getElementById('compoundScore').textContent =
+        `Compound: ${compound >= 0 ? '+' : ''}${compound.toFixed(4)}`;
+
+      // Score meter: map [-1, 1] to [0%, 100%]
+      const pct = ((compound + 1) / 2) * 100;
+      const fill = document.getElementById('scoreMeterFill');
+      const needle = document.getElementById('scoreMeterNeedle');
+      fill.style.width = `${pct}%`;
+      fill.className = `score-meter-fill fill-${sentiment}`;
+      needle.style.left = `${pct}%`;
+
+      // Breakdown bars
+      setBar('barPos', 'valPos', s.pos, 'bar-pos');
+      setBar('barNeu', 'valNeu', s.neu, 'bar-neu');
+      setBar('barNeg', 'valNeg', s.neg, 'bar-neg');
+
+      // Keywords
+      const chips = document.getElementById('keywordChips');
+      chips.innerHTML = '';
+      if (keywords && keywords.length) {
+        keywords.forEach(kw => {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.textContent = kw;
+          chips.appendChild(chip);
+        });
+        document.getElementById('keywordsSection').classList.remove('hidden');
+      } else {
+        document.getElementById('keywordsSection').classList.add('hidden');
+      }
+
+      document.getElementById('resultEmpty').classList.add('hidden');
+      document.getElementById('resultContent').classList.remove('hidden');
+    }
+
+    function setBar(barId, valId, value, cls) {
+      const bar = document.getElementById(barId);
+      bar.style.width = `${(value * 100).toFixed(1)}%`;
+      bar.className = `bar-fill ${cls}`;
+      document.getElementById(valId).textContent = value.toFixed(3);
+    }
+
+    function hideResult() {
+      document.getElementById('resultContent').classList.add('hidden');
+      document.getElementById('resultEmpty').classList.remove('hidden');
+    }
+
+    // ------------------------------------------------------------------ //
+    // Loading / error state helpers
+    // ------------------------------------------------------------------ //
+    function setLoading(on) {
+      analyzeBtn.disabled = on;
+      analyzeBtn.querySelector('.btn-text').classList.toggle('hidden', on);
+      analyzeBtn.querySelector('.btn-spinner').classList.toggle('hidden', !on);
+    }
+
+    function showError(msg, type = 'error') {
+      errorBanner.textContent = msg;
+      errorBanner.className = `error-banner ${type}`;
+    }
+    function hideError() {
+      errorBanner.className = 'error-banner hidden';
+    }
+
+    // ------------------------------------------------------------------ //
+    // History tab
+    // ------------------------------------------------------------------ //
+    let historyPage = 0;
+    const PAGE_SIZE = 15;
+
+    document.getElementById('refreshHistory').addEventListener('click', () => {
+      historyPage = 0;
+      loadHistory();
+    });
+
+    async function loadHistory() {
+      document.getElementById('historyLoading').classList.remove('hidden');
+      document.getElementById('historyTable').classList.add('hidden');
+      document.getElementById('historyEmpty').classList.add('hidden');
+
+      try {
+        const offset = historyPage * PAGE_SIZE;
+        const res  = await fetch(`/history?limit=${PAGE_SIZE}&offset=${offset}`);
+        const data = await res.json();
+
+        document.getElementById('historyLoading').classList.add('hidden');
+
+        if (!data.records || data.records.length === 0) {
+          document.getElementById('historyEmpty').classList.remove('hidden');
+          return;
+        }
+
+        renderHistoryTable(data.records);
+        renderPagination(data.total, data.limit, data.offset);
+        document.getElementById('historyTable').classList.remove('hidden');
+      } catch (err) {
+        document.getElementById('historyLoading').classList.add('hidden');
+        document.getElementById('historyEmpty').classList.remove('hidden');
+        document.getElementById('historyEmpty').querySelector('p').textContent =
+          'Failed to load history. Is the server running?';
+        console.error(err);
+      }
+    }
+
+    function renderHistoryTable(records) {
+      const tbody = document.getElementById('historyBody');
+      tbody.innerHTML = '';
+
+      records.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        const ts = new Date(r.timestamp).toLocaleString();
+        const preview = r.original_text.length > 60
+          ? r.original_text.slice(0, 60) + '…'
+          : r.original_text;
+
+        tr.innerHTML = `
+          <td class="col-id">${r.id ?? '--'}</td>
+          <td class="col-time">${ts}</td>
+          <td><span class="badge-sm badge-${r.sentiment}">${capitalize(r.sentiment)}</span></td>
+          <td class="col-score ${scoreClass(r.compound_score)}">${fmtScore(r.compound_score)}</td>
+          <td class="col-preview" title="${escHtml(r.original_text)}">${escHtml(preview)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderPagination(total, limit, offset) {
+      const pg = document.getElementById('pagination');
+      pg.innerHTML = '';
+      const totalPages = Math.ceil(total / limit);
+      const currentPage = Math.floor(offset / limit);
+      if (totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.className = 'btn btn-ghost btn-sm';
+      prev.textContent = '← Prev';
+      prev.disabled = currentPage === 0;
+      prev.addEventListener('click', () => { historyPage--; loadHistory(); });
+      pg.appendChild(prev);
+
+      const info = document.createElement('span');
+      info.className = 'page-info';
+      info.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+      pg.appendChild(info);
+
+      const next = document.createElement('button');
+      next.className = 'btn btn-ghost btn-sm';
+      next.textContent = 'Next →';
+      next.disabled = currentPage >= totalPages - 1;
+      next.addEventListener('click', () => { historyPage++; loadHistory(); });
+      pg.appendChild(next);
+    }
+
+    // ------------------------------------------------------------------ //
+    // Stats tab
+    // ------------------------------------------------------------------ //
+    async function loadStats() {
+      try {
+        const res  = await fetch('/trends/summary');
+        const data = await res.json();
+
+        document.getElementById('statTotalVal').textContent = data.total_analyzed.toLocaleString();
+        document.getElementById('statPosVal').textContent   = data.positive_count.toLocaleString();
+        document.getElementById('statNeuVal').textContent   = data.neutral_count.toLocaleString();
+        document.getElementById('statNegVal').textContent   = data.negative_count.toLocaleString();
+
+        renderDonut(data.positive_count, data.neutral_count, data.negative_count, data.total_analyzed);
+
+        const avg = data.avg_compound;
+        document.getElementById('avgScoreValue').textContent =
+          `${avg >= 0 ? '+' : ''}${avg.toFixed(4)}`;
+
+        // Avg score meter
+        const avgPct = ((avg + 1) / 2) * 100;
+        document.getElementById('avgScoreFill').style.width = `${avgPct}%`;
+        document.getElementById('avgScoreNeedle').style.left = `${avgPct}%`;
+
+        document.getElementById('donutAvg').textContent =
+          `${avg >= 0 ? '+' : ''}${avg.toFixed(2)}`;
+
+        if (data.total_analyzed === 0) {
+          document.getElementById('statNote').textContent = 'No data yet — run some analyses first!';
+        } else {
+          const pct = p => data.total_analyzed ? ((p / data.total_analyzed) * 100).toFixed(1) : '0.0';
+          document.getElementById('statNote').textContent =
+            `Positive ${pct(data.positive_count)}%  ·  Neutral ${pct(data.neutral_count)}%  ·  Negative ${pct(data.negative_count)}%`;
+        }
+      } catch (err) {
+        console.error('Stats load failed:', err);
+      }
+    }
+
+    function renderDonut(pos, neu, neg, total) {
+      const CIRC = 2 * Math.PI * 45; // circumference
+      if (total === 0) {
+        ['donutPos', 'donutNeu', 'donutNeg'].forEach(id => {
+          document.getElementById(id).setAttribute('stroke-dasharray', `0 ${CIRC}`);
+        });
+        return;
+      }
+      const posFrac = pos / total;
+      const neuFrac = neu / total;
+      const negFrac = neg / total;
+
+      const posLen = posFrac * CIRC;
+      const neuLen = neuFrac * CIRC;
+      const negLen = negFrac * CIRC;
+
+      const setArc = (id, len, offset) => {
+        const el = document.getElementById(id);
+        el.setAttribute('stroke-dasharray', `${len} ${CIRC - len}`);
+        el.setAttribute('stroke-dashoffset', -offset);
+      };
+
+      // Start at top (-90 deg = offset 0 in SVG coords means right, so subtract CIRC/4)
+      const start = CIRC * 0.25;
+      setArc('donutPos', posLen, -start);
+      setArc('donutNeu', neuLen, -(start + posLen));
+      setArc('donutNeg', negLen, -(start + posLen + neuLen));
+    }
+
+    // ------------------------------------------------------------------ //
+    // Tiny utilities
+    // ------------------------------------------------------------------ //
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+    function fmtScore(v)   { return (v >= 0 ? '+' : '') + Number(v).toFixed(4); }
+    function scoreClass(v) { return v >= 0.05 ? 'score-pos' : v <= -0.05 ? 'score-neg' : 'score-neu'; }
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;');
+    }
+  })();
+  </script>
+
 </body>
 </html>

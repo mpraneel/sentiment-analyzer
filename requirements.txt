@@ -1,4 +1,15 @@
-Flask
-nltk
-psycopg2-binary  # for PostgreSQL, or use mysql-connector-python for MySQL
-boto3  # for AWS integration 
+# Core web framework
+Flask>=3.0,<4.0
+flask-sqlalchemy>=3.1,<4.0
+
+# NLTK for NLP + VADER sentiment analysis
+nltk>=3.9
+
+# PostgreSQL driver (optional — only needed when using PostgreSQL instead of SQLite)
+psycopg2-binary>=2.9
+
+# Production WSGI server
+gunicorn>=22.0
+
+# Environment variable management
+python-dotenv>=1.0

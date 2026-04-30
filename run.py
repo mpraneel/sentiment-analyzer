@@ -1,6 +1,14 @@
-from app import create_app
+"""
+run.py  —  convenience dev-server launcher
 
-app = create_app()
+Usage:
+    python run.py
 
-if __name__ == '__main__':
+For production use Gunicorn:
+    gunicorn app:app
+"""
+
+from app import app
+
+if __name__ == "__main__":
     app.run(debug=True)
